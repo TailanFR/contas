@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Meu Financeiro</title>
+  <title>Controle Financeiro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -14,18 +14,33 @@
     .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
+<body class="bg-[#111827] text-slate-100 min-h-screen flex flex-col justify-between">
 
-  <!-- SCRIPT API SETUP -->
+  <!-- COLE A URL DO SEU GOOGLE APPS SCRIPT AQUI -->
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwenoeK4fxY1gHEt2o-jLTJw0Z00ILFP8rI39YMkkx8R26PHKcEYbJmNa0yvqwpCF7pEA/exec"; // <<-- COLE SUA URL AQUI
+    const API_URL = "https://script.google.com/macros/s/AKfycbz9Rzi0U3YNMk1YV-Ri9uIQnCCYf4elj340z-pSKkAifm2rTdlZwiOsFvSXILVupS1mSA/exec"; 
   </script>
 
+  <!-- OVERLAY / POPUP DE CARREGAMENTO -->
+  <div id="loading-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 transition-opacity duration-300">
+    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 flex flex-col items-center shadow-2xl max-w-xs w-full text-center space-y-4">
+      <div class="relative w-12 h-12 flex items-center justify-center">
+        <i class="fa-solid fa-circle-notch fa-spin text-emerald-400 text-4xl"></i>
+      </div>
+      <div>
+        <h4 id="loading-title" class="font-bold text-white text-base">Processando...</h4>
+        <p id="loading-desc" class="text-xs text-slate-400 mt-1">Sincronizando com a planilha...</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Header -->
-  <header class="bg-slate-800/80 backdrop-blur-md pt-safe sticky top-0 z-50 border-b border-slate-700 p-4">
+  <header class="bg-slate-900/90 backdrop-blur-md pt-safe sticky top-0 z-50 border-b border-slate-800 p-4">
     <div class="flex justify-between items-center max-w-md mx-auto">
-      <h1 class="text-xl font-bold text-emerald-400"><i class="fa-solid font-bold fa-wallet mr-2"></i>Controle Financeiro</h1>
-      <button onclick="carregarDados()" class="text-slate-400 hover:text-white transition">
+      <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+        <i class="fa-solid fa-wallet"></i> Controle Financeiro
+      </h1>
+      <button onclick="carregarDados('Atualizando dados...')" class="text-slate-400 hover:text-white p-2 rounded-xl transition active:scale-95">
         <i class="fa-solid fa-rotate-right text-lg" id="refresh-icon"></i>
       </button>
     </div>
@@ -38,9 +53,7 @@
     <section>
       <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Saldos & Investimentos</h2>
       <div id="cards-saldos" class="grid grid-cols-2 gap-3">
-        <!-- Renderizado dinamicamente pelo JS -->
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-pulse h-20"></div>
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-pulse h-20"></div>
+        <!-- Renderizado dinamicamente -->
       </div>
     </section>
 
@@ -48,7 +61,9 @@
     <section>
       <div class="flex justify-between items-center mb-3">
         <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Entradas do Mês</h2>
-        <button onclick="abrirModalManual('entrada')" class="text-xs text-emerald-400 font-medium hover:underline">+ Nova Pousada/Outro</button>
+        <button onclick="abrirModalManual('entrada')" class="text-xs text-emerald-400 font-medium hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> Nova Pousada/Outro
+        </button>
       </div>
       <div id="lista-entradas" class="space-y-3">
         <!-- Cards de Entradas -->
@@ -59,7 +74,9 @@
     <section>
       <div class="flex justify-between items-center mb-3">
         <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contas & Saídas</h2>
-        <button onclick="abrirModalManual('saida')" class="text-xs text-rose-400 font-medium hover:underline">+ Lançar Saída/Cartão</button>
+        <button onclick="abrirModalManual('saida')" class="text-xs text-rose-400 font-medium hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> Lançar Saída/Cartão
+        </button>
       </div>
       <div id="lista-saidas" class="space-y-3">
         <!-- Cards de Saídas -->
@@ -68,8 +85,34 @@
 
   </main>
 
+  <!-- MODAL PAGAMENTO SAÍDA (SELEÇÃO DE BANCO) -->
+  <div id="modal-pagar-saida" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 border border-slate-700 space-y-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-money-bill-transfer text-rose-400"></i> Confirmar Pagamento
+      </h3>
+      <p class="text-xs text-slate-300">Escolha de qual banco saiu o valor para descontar do saldo:</p>
+      
+      <input type="hidden" id="pagar-saida-row">
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Banco Origem</label>
+        <select id="pagar-saida-banco" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500">
+          <option value="Sicred">Sicred</option>
+          <option value="BB">BB</option>
+          <option value="">Nenhum (Não descontar do saldo banco)</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="fecharModalPagar()" class="flex-1 bg-slate-700 py-3 rounded-xl font-medium text-slate-300">Cancelar</button>
+        <button onclick="confirmarPagarSaida()" class="flex-1 bg-rose-500 py-3 rounded-xl font-medium text-white shadow-lg">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE LANÇAMENTO MANUAL -->
-  <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div id="modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 border border-slate-700 space-y-4">
       <h3 id="modal-titulo" class="text-lg font-bold text-white">Novo Lançamento</h3>
       
@@ -99,13 +142,13 @@
         <label class="block text-xs text-slate-400 mb-1">Forma de Desconto</label>
         <select id="modal-meio" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white">
           <option value="credito">Crédito (Apenas soma na fatura do Cartão)</option>
-          <option value="debito">Débito (Desconta direto da Conta Banco)</option>
+          <option value="debito">Débito (Desconta direto do Banco)</option>
         </select>
       </div>
 
       <div class="flex gap-2 pt-2">
         <button onclick="fecharModal()" class="flex-1 bg-slate-700 py-3 rounded-xl font-medium text-slate-300">Cancelar</button>
-        <button onclick="salvarModal()" class="flex-1 bg-emerald-500 py-3 rounded-xl font-medium text-slate-900">Salvar</button>
+        <button onclick="salvarModal()" class="flex-1 bg-emerald-500 py-3 rounded-xl font-bold text-slate-950">Salvar</button>
       </div>
     </div>
   </div>
@@ -114,16 +157,30 @@
   <script>
     let dadosAtuais = null;
 
-    async function carregarDados() {
-      document.getElementById('refresh-icon').classList.add('fa-spin');
+    function mostrarLoading(titulo = "Processando...", desc = "Aguarde um momento...") {
+      document.getElementById('loading-title').innerText = titulo;
+      document.getElementById('loading-desc').innerText = desc;
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.remove('hidden');
+      setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+    }
+
+    function esconderLoading() {
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.add('opacity-0');
+      setTimeout(() => overlay.classList.add('hidden'), 300);
+    }
+
+    async function carregarDados(mensagemLoading = "Carregando saldos...") {
+      mostrarLoading("Sincronizando...", mensagemLoading);
       try {
         const res = await fetch(API_URL);
         dadosAtuais = await res.json();
         renderizar();
       } catch (err) {
-        alert("Erro ao carregar dados do Google Sheets");
+        alert("Erro ao conectar com a planilha. Verifique a URL da API.");
       } finally {
-        document.getElementById('refresh-icon').classList.remove('fa-spin');
+        esconderLoading();
       }
     }
 
@@ -140,7 +197,7 @@
         if (s.tipo === "Investimento") { cor = "text-purple-400"; icone = "fa-chart-line"; }
 
         saldosContainer.innerHTML += `
-          <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/60 shadow-lg flex flex-col justify-between">
+          <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-lg flex flex-col justify-between">
             <div class="flex justify-between items-center text-slate-400 text-xs mb-1">
               <span>${s.nome}</span>
               <i class="fa-solid ${icone}"></i>
@@ -155,76 +212,113 @@
       // 2. Render Entradas
       const entradasContainer = document.getElementById('lista-entradas');
       entradasContainer.innerHTML = '';
-      dadosAtuais.entradas.forEach(e => {
-        let tagParcelas = e.parcelas !== null ? `<span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20">${e.parcelas}x restantes</span>` : '';
-        
-        entradasContainer.innerHTML += `
-          <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-white">${e.descricao}</span>
-                ${tagParcelas}
+      
+      if (dadosAtuais.entradas.length === 0) {
+        entradasContainer.innerHTML = `
+          <div class="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">
+            Nenhuma entrada pendente para este mês!
+          </div>`;
+      } else {
+        dadosAtuais.entradas.forEach(e => {
+          let tagParcelas = e.parcelas !== null ? `<span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20">${e.parcelas}x restantes</span>` : '';
+          
+          entradasContainer.innerHTML += `
+            <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-white">${e.descricao}</span>
+                  ${tagParcelas}
+                </div>
+                <div class="text-xs text-slate-400 mt-0.5">
+                  Destino: <span class="text-slate-200">${e.banco}</span>
+                </div>
               </div>
-              <div class="text-xs text-slate-400 mt-0.5">
-                Destino: <span class="text-slate-200">${e.banco}</span>
+              <div class="text-right">
+                <div class="text-emerald-400 font-bold mb-1">R$ ${e.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <button onclick="receberEntrada(${e.row})" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1 ml-auto">
+                  <i class="fa-solid fa-check"></i> Recebi
+                </button>
               </div>
             </div>
-            <div class="text-right">
-              <div class="text-emerald-400 font-bold mb-1">R$ ${e.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-              <button onclick="receberEntrada(${e.row})" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs px-3 py-1.5 rounded-xl font-bold transition">
-                <i class="fa-solid fa-check mr-1"></i> Recebi
-              </button>
-            </div>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
 
       // 3. Render Saídas
       const saidasContainer = document.getElementById('lista-saidas');
       saidasContainer.innerHTML = '';
-      dadosAtuais.saidas.forEach(s => {
-        let tagParcelas = s.parcelas !== null ? `<span class="bg-rose-500/10 text-rose-400 text-[10px] px-2 py-0.5 rounded-full border border-rose-500/20">${s.parcelas}x restantes</span>` : '';
-        
-        saidasContainer.innerHTML += `
-          <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-white">${s.descricao}</span>
-                ${tagParcelas}
+
+      if (dadosAtuais.saidas.length === 0) {
+        saidasContainer.innerHTML = `
+          <div class="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">
+            Nenhuma conta pendente para este mês!
+          </div>`;
+      } else {
+        dadosAtuais.saidas.forEach(s => {
+          let tagParcelas = s.parcelas !== null ? `<span class="bg-rose-500/10 text-rose-400 text-[10px] px-2 py-0.5 rounded-full border border-rose-500/20">${s.parcelas}x restantes</span>` : '';
+          
+          saidasContainer.innerHTML += `
+            <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-white">${s.descricao}</span>
+                  ${tagParcelas}
+                </div>
+                <div class="text-xs text-slate-400 mt-0.5">
+                  ${s.cartao ? 'Cartão: ' + s.cartao : 'Débito / Conta'}
+                </div>
               </div>
-              <div class="text-xs text-slate-400 mt-0.5">
-                ${s.cartao ? 'Cartão: ' + s.cartao : 'Débito Automático/Conta'}
+              <div class="text-right">
+                <div class="text-rose-400 font-bold mb-1">R$ ${s.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <button onclick="abrirModalPagar(${s.row})" class="bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 text-xs px-3 py-1.5 rounded-xl font-medium transition">
+                  Paguei
+                </button>
               </div>
             </div>
-            <div class="text-right">
-              <div class="text-rose-400 font-bold mb-1">R$ ${s.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-              <button onclick="pagarSaida(${s.row})" class="bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 text-xs px-3 py-1.5 rounded-xl font-medium transition">
-                Paguei
-              </button>
-            </div>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
     }
 
     async function receberEntrada(row) {
-      if (!confirm("Confirmar recebimento deste valor?")) return;
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: "receber_entrada", row: row })
-      });
-      carregarDados();
+      mostrarLoading("Lançando Entrada...", "Creditando no banco e atualizando parcelas...");
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: "receber_entrada", row: row })
+        });
+        await carregarDados("Atualizando tela...");
+      } catch (err) {
+        alert("Erro ao efetuar lançamento.");
+        esconderLoading();
+      }
     }
 
-    async function pagarSaida(row) {
-      const banco = prompt("De qual banco saiu o valor para o pagamento? (Ex: Sicred ou BB)", "Sicred");
-      if (!banco) return;
+    function abrirModalPagar(row) {
+      document.getElementById('pagar-saida-row').value = row;
+      document.getElementById('modal-pagar-saida').classList.remove('hidden');
+    }
 
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: "pagar_saida", row: row, banco: banco })
-      });
-      carregarDados();
+    function fecharModalPagar() {
+      document.getElementById('modal-pagar-saida').classList.add('hidden');
+    }
+
+    async function confirmarPagarSaida() {
+      const row = document.getElementById('pagar-saida-row').value;
+      const banco = document.getElementById('pagar-saida-banco').value;
+      fecharModalPagar();
+
+      mostrarLoading("Lançando Pagamento...", "Debitando do saldo e dando baixa...");
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: "pagar_saida", row: row, banco: banco })
+        });
+        await carregarDados("Atualizando tela...");
+      } catch (err) {
+        alert("Erro ao efetuar baixa.");
+        esconderLoading();
+      }
     }
 
     function abrirModalManual(tipo) {
@@ -251,23 +345,29 @@
       }
 
       fecharModal();
+      mostrarLoading("Salvando Lançamento...", "Registrando na planilha...");
 
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: "lancamento_manual",
-          tipo: tipo,
-          descricao: descricao,
-          valor: valor,
-          destino: destino,
-          meioPagamento: meio
-        })
-      });
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: "lancamento_manual",
+            tipo: tipo,
+            descricao: descricao,
+            valor: valor,
+            destino: destino,
+            meioPagamento: meio
+          })
+        });
 
-      carregarDados();
+        await carregarDados("Atualizando tela...");
+      } catch (err) {
+        alert("Erro ao salvar lançamento.");
+        esconderLoading();
+      }
     }
 
-    window.onload = carregarDados;
+    window.onload = () => carregarDados("Carregando seus dados...");
   </script>
 </body>
 </html>
