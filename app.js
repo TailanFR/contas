@@ -2,7 +2,7 @@
 // FRONT-END APP LOGIC
 // ========================================================
 
-let API_URL = localStorage.getItem('API_URL') || '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwI8VSNRmMDbjQpi0Eafcp7DFO5v4s71pIqFs1hMLS458LWgBYcUuDnQzZTMkABBu69Xw/exec';
 let selectedType = 'Despesa';
 let formOptions = { receitasCategorias: [], despesasCategorias: [], cartoes: [], formasPagamento: [] };
 
