@@ -2,165 +2,272 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#121826">
-  <title>Meu Fluxo Financeiro</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2845/2845869.png">
+  <title>Meu Financeiro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .pt-safe { padding-top: env(safe-area-inset-top); }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
 
-  <!-- TOP HEADER -->
-  <header class="app-header">
-    <div class="header-content">
-      <span class="badge">Agosto/2026</span>
-      <h1>Controle Financeiro</h1>
+  <!-- SCRIPT API SETUP -->
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwenoeK4fxY1gHEt2o-jLTJw0Z00ILFP8rI39YMkkx8R26PHKcEYbJmNa0yvqwpCF7pEA/exec"; // <<-- COLE SUA URL AQUI
+  </script>
+
+  <!-- Header -->
+  <header class="bg-slate-800/80 backdrop-blur-md pt-safe sticky top-0 z-50 border-b border-slate-700 p-4">
+    <div class="flex justify-between items-center max-w-md mx-auto">
+      <h1 class="text-xl font-bold text-emerald-400"><i class="fa-solid font-bold fa-wallet mr-2"></i>Controle Financeiro</h1>
+      <button onclick="carregarDados()" class="text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-rotate-right text-lg" id="refresh-icon"></i>
+      </button>
     </div>
   </header>
 
-  <main class="app-body">
-
-    <!-- TAB 1: DASHBOARD -->
-    <section id="tab-dashboard" class="tab-content active">
-      <div class="card balance-card">
-        <span class="card-label">Saldo do Mês</span>
-        <h2 id="dash-saldo">R$ 0,00</h2>
-        <div class="balance-grid">
-          <div class="bal-item green">
-            <small>Receitas</small>
-            <strong id="dash-receitas">R$ 0,00</strong>
-          </div>
-          <div class="bal-item red">
-            <small>Despesas</small>
-            <strong id="dash-despesas">R$ 0,00</strong>
-          </div>
-          <div class="bal-item orange">
-            <small>Contas Fixas</small>
-            <strong id="dash-fixas">R$ 0,00</strong>
-          </div>
-        </div>
-      </div>
-
-      <div class="card meta-card">
-        <h3>Meta & Sobras</h3>
-        <div class="meta-info">
-          <div><small>Média de Sobra:</small> <span id="dash-media">R$ 0,00</span></div>
-          <div><small>Meta de Sobra:</small> <span id="dash-meta">R$ 0,00</span></div>
-          <div><small>Meses até a Meta:</small> <span id="dash-meses" class="highlight">-</span></div>
-        </div>
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 max-w-md mx-auto w-full p-4 space-y-6 mb-20">
+    
+    <!-- DASHBOARD DE SALDOS -->
+    <section>
+      <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Saldos & Investimentos</h2>
+      <div id="cards-saldos" class="grid grid-cols-2 gap-3">
+        <!-- Renderizado dinamicamente pelo JS -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-pulse h-20"></div>
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 animate-pulse h-20"></div>
       </div>
     </section>
 
-    <!-- TAB 2: NOVO LANÇAMENTO -->
-    <section id="tab-novo" class="tab-content">
-      <div class="card form-card">
-        <h2>Novo Lançamento</h2>
-        <form id="form-lancamento">
-          <div class="type-selector">
-            <button type="button" class="btn-type active" data-type="Despesa">🔴 Despesa</button>
-            <button type="button" class="btn-type" data-type="Receita">🟢 Receita</button>
-          </div>
-
-          <div class="input-group">
-            <label>Valor (R$)</label>
-            <input type="number" step="0.01" id="inp-valor" placeholder="0,00" required>
-          </div>
-
-          <div class="input-group">
-            <label>Descrição</label>
-            <input type="text" id="inp-descricao" placeholder="Ex: Mercado, Combustível" required>
-          </div>
-
-          <div class="input-group">
-            <label>Categoria</label>
-            <select id="inp-categoria" required></select>
-          </div>
-
-          <div class="input-row">
-            <div class="input-group">
-              <label>Forma</label>
-              <select id="inp-forma"></select>
-            </div>
-            <div class="input-group" id="group-cartao">
-              <label>Cartão</label>
-              <select id="inp-cartao"></select>
-            </div>
-          </div>
-
-          <div class="input-row" id="group-parcelas" style="display: none;">
-            <div class="input-group">
-              <label>Parc. Atual</label>
-              <input type="number" id="inp-parc-atual" value="1" min="1">
-            </div>
-            <div class="input-group">
-              <label>Total Parc.</label>
-              <input type="number" id="inp-parc-total" value="1" min="1">
-            </div>
-          </div>
-
-          <div class="input-group">
-            <label>Data</label>
-            <input type="date" id="inp-data">
-          </div>
-
-          <button type="submit" class="btn-submit" id="btn-salvar">Salvar Lançamento</button>
-        </form>
+    <!-- ENTRADAS -->
+    <section>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Entradas do Mês</h2>
+        <button onclick="abrirModalManual('entrada')" class="text-xs text-emerald-400 font-medium hover:underline">+ Nova Pousada/Outro</button>
+      </div>
+      <div id="lista-entradas" class="space-y-3">
+        <!-- Cards de Entradas -->
       </div>
     </section>
 
-    <!-- TAB 3: EXTRATO -->
-    <section id="tab-extrato" class="tab-content">
-      <div class="card">
-        <div class="card-header-flex">
-          <h2>Últimos Lançamentos</h2>
-          <button class="btn-icon" id="btn-refresh">🔄 Atualizar</button>
-        </div>
-        <div id="lista-lancamentos" class="lancamentos-list">
-          <p class="empty-msg">Carregando lançamentos...</p>
-        </div>
+    <!-- SAÍDAS -->
+    <section>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contas & Saídas</h2>
+        <button onclick="abrirModalManual('saida')" class="text-xs text-rose-400 font-medium hover:underline">+ Lançar Saída/Cartão</button>
       </div>
-    </section>
-
-    <!-- TAB 4: CONFIGURAÇÕES -->
-    <section id="tab-config" class="tab-content">
-      <div class="card">
-        <h2>Conexão com Google Sheets</h2>
-        <p class="help-text">Cole abaixo a URL do Web App gerada no seu Apps Script:</p>
-        <div class="input-group">
-          <label>URL do Apps Script</label>
-          <input type="url" id="inp-api-url" placeholder="https://script.google.com/macros/s/.../exec">
-        </div>
-        <button id="btn-save-config" class="btn-submit">Salvar Conexão</button>
+      <div id="lista-saidas" class="space-y-3">
+        <!-- Cards de Saídas -->
       </div>
     </section>
 
   </main>
 
-  <!-- BOTTOM NAVIGATION BAR (iOS Native Style) -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-tab="tab-dashboard">
-      <span class="icon">📊</span>
-      <span class="label">Resumo</span>
-    </button>
-    <button class="nav-item" data-tab="tab-novo">
-      <span class="icon">➕</span>
-      <span class="label">Lançar</span>
-    </button>
-    <button class="nav-item" data-tab="tab-extrato">
-      <span class="icon">📄</span>
-      <span class="label">Extrato</span>
-    </button>
-    <button class="nav-item" data-tab="tab-config">
-      <span class="icon">⚙️</span>
-      <span class="label">Config</span>
-    </button>
-  </nav>
+  <!-- MODAL DE LANÇAMENTO MANUAL -->
+  <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 border border-slate-700 space-y-4">
+      <h3 id="modal-titulo" class="text-lg font-bold text-white">Novo Lançamento</h3>
+      
+      <input type="hidden" id="modal-tipo">
 
-  <div id="toast" class="toast"></div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Descrição</label>
+        <input type="text" id="modal-desc" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500" placeholder="Ex: Pousada, Mercado...">
+      </div>
 
-  <script src="app.js"></script>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Valor (R$)</label>
+        <input type="number" id="modal-valor" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500" placeholder="0.00">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Destino / Banco / Cartão</label>
+        <select id="modal-destino" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500">
+          <option value="Sicred">Sicred</option>
+          <option value="BB">BB</option>
+          <option value="Cartão Sicred">Cartão Sicred</option>
+          <option value="Cartão BB">Cartão BB</option>
+        </select>
+      </div>
+
+      <div id="div-meio-pagamento" class="hidden">
+        <label class="block text-xs text-slate-400 mb-1">Forma de Desconto</label>
+        <select id="modal-meio" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white">
+          <option value="credito">Crédito (Apenas soma na fatura do Cartão)</option>
+          <option value="debito">Débito (Desconta direto da Conta Banco)</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="fecharModal()" class="flex-1 bg-slate-700 py-3 rounded-xl font-medium text-slate-300">Cancelar</button>
+        <button onclick="salvarModal()" class="flex-1 bg-emerald-500 py-3 rounded-xl font-medium text-slate-900">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Logic JS -->
+  <script>
+    let dadosAtuais = null;
+
+    async function carregarDados() {
+      document.getElementById('refresh-icon').classList.add('fa-spin');
+      try {
+        const res = await fetch(API_URL);
+        dadosAtuais = await res.json();
+        renderizar();
+      } catch (err) {
+        alert("Erro ao carregar dados do Google Sheets");
+      } finally {
+        document.getElementById('refresh-icon').classList.remove('fa-spin');
+      }
+    }
+
+    function renderizar() {
+      if (!dadosAtuais) return;
+
+      // 1. Render Saldos
+      const saldosContainer = document.getElementById('cards-saldos');
+      saldosContainer.innerHTML = '';
+      dadosAtuais.saldos.forEach(s => {
+        let cor = "text-emerald-400";
+        let icone = "fa-building-columns";
+        if (s.tipo === "Poupança") { cor = "text-sky-400"; icone = "fa-piggy-bank"; }
+        if (s.tipo === "Investimento") { cor = "text-purple-400"; icone = "fa-chart-line"; }
+
+        saldosContainer.innerHTML += `
+          <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/60 shadow-lg flex flex-col justify-between">
+            <div class="flex justify-between items-center text-slate-400 text-xs mb-1">
+              <span>${s.nome}</span>
+              <i class="fa-solid ${icone}"></i>
+            </div>
+            <div class="text-lg font-bold ${cor}">
+              R$ ${s.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </div>
+          </div>
+        `;
+      });
+
+      // 2. Render Entradas
+      const entradasContainer = document.getElementById('lista-entradas');
+      entradasContainer.innerHTML = '';
+      dadosAtuais.entradas.forEach(e => {
+        let tagParcelas = e.parcelas !== null ? `<span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20">${e.parcelas}x restantes</span>` : '';
+        
+        entradasContainer.innerHTML += `
+          <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-white">${e.descricao}</span>
+                ${tagParcelas}
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5">
+                Destino: <span class="text-slate-200">${e.banco}</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-emerald-400 font-bold mb-1">R$ ${e.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+              <button onclick="receberEntrada(${e.row})" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs px-3 py-1.5 rounded-xl font-bold transition">
+                <i class="fa-solid fa-check mr-1"></i> Recebi
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      // 3. Render Saídas
+      const saidasContainer = document.getElementById('lista-saidas');
+      saidasContainer.innerHTML = '';
+      dadosAtuais.saidas.forEach(s => {
+        let tagParcelas = s.parcelas !== null ? `<span class="bg-rose-500/10 text-rose-400 text-[10px] px-2 py-0.5 rounded-full border border-rose-500/20">${s.parcelas}x restantes</span>` : '';
+        
+        saidasContainer.innerHTML += `
+          <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-white">${s.descricao}</span>
+                ${tagParcelas}
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5">
+                ${s.cartao ? 'Cartão: ' + s.cartao : 'Débito Automático/Conta'}
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-rose-400 font-bold mb-1">R$ ${s.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+              <button onclick="pagarSaida(${s.row})" class="bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 text-xs px-3 py-1.5 rounded-xl font-medium transition">
+                Paguei
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    async function receberEntrada(row) {
+      if (!confirm("Confirmar recebimento deste valor?")) return;
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "receber_entrada", row: row })
+      });
+      carregarDados();
+    }
+
+    async function pagarSaida(row) {
+      const banco = prompt("De qual banco saiu o valor para o pagamento? (Ex: Sicred ou BB)", "Sicred");
+      if (!banco) return;
+
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "pagar_saida", row: row, banco: banco })
+      });
+      carregarDados();
+    }
+
+    function abrirModalManual(tipo) {
+      document.getElementById('modal-tipo').value = tipo;
+      document.getElementById('modal-titulo').innerText = tipo === 'entrada' ? 'Nova Entrada (Ex: Pousada)' : 'Nova Saída / Lançamento';
+      document.getElementById('div-meio-pagamento').className = tipo === 'saida' ? 'block' : 'hidden';
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function fecharModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    async function salvarModal() {
+      const tipo = document.getElementById('modal-tipo').value;
+      const descricao = document.getElementById('modal-desc').value;
+      const valor = document.getElementById('modal-valor').value;
+      const destino = document.getElementById('modal-destino').value;
+      const meio = document.getElementById('modal-meio').value;
+
+      if (!descricao || !valor) {
+        alert("Preencha todos os campos!");
+        return;
+      }
+
+      fecharModal();
+
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "lancamento_manual",
+          tipo: tipo,
+          descricao: descricao,
+          valor: valor,
+          destino: destino,
+          meioPagamento: meio
+        })
+      });
+
+      carregarDados();
+    }
+
+    window.onload = carregarDados;
+  </script>
 </body>
 </html>
