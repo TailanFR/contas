@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#121826">
+  <title>Meu Fluxo Financeiro</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2845/2845869.png">
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="header-content">
+      <span class="badge">Agosto/2026</span>
+      <h1>Controle Financeiro</h1>
+    </div>
+  </header>
+
+  <main class="app-body">
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="card balance-card">
+        <span class="card-label">Saldo do Mês</span>
+        <h2 id="dash-saldo">R$ 0,00</h2>
+        <div class="balance-grid">
+          <div class="bal-item green">
+            <small>Receitas</small>
+            <strong id="dash-receitas">R$ 0,00</strong>
+          </div>
+          <div class="bal-item red">
+            <small>Despesas</small>
+            <strong id="dash-despesas">R$ 0,00</strong>
+          </div>
+          <div class="bal-item orange">
+            <small>Contas Fixas</small>
+            <strong id="dash-fixas">R$ 0,00</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="card meta-card">
+        <h3>Meta & Sobras</h3>
+        <div class="meta-info">
+          <div><small>Média de Sobra:</small> <span id="dash-media">R$ 0,00</span></div>
+          <div><small>Meta de Sobra:</small> <span id="dash-meta">R$ 0,00</span></div>
+          <div><small>Meses até a Meta:</small> <span id="dash-meses" class="highlight">-</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: NOVO LANÇAMENTO -->
+    <section id="tab-novo" class="tab-content">
+      <div class="card form-card">
+        <h2>Novo Lançamento</h2>
+        <form id="form-lancamento">
+          <div class="type-selector">
+            <button type="button" class="btn-type active" data-type="Despesa">🔴 Despesa</button>
+            <button type="button" class="btn-type" data-type="Receita">🟢 Receita</button>
+          </div>
+
+          <div class="input-group">
+            <label>Valor (R$)</label>
+            <input type="number" step="0.01" id="inp-valor" placeholder="0,00" required>
+          </div>
+
+          <div class="input-group">
+            <label>Descrição</label>
+            <input type="text" id="inp-descricao" placeholder="Ex: Mercado, Combustível" required>
+          </div>
+
+          <div class="input-group">
+            <label>Categoria</label>
+            <select id="inp-categoria" required></select>
+          </div>
+
+          <div class="input-row">
+            <div class="input-group">
+              <label>Forma</label>
+              <select id="inp-forma"></select>
+            </div>
+            <div class="input-group" id="group-cartao">
+              <label>Cartão</label>
+              <select id="inp-cartao"></select>
+            </div>
+          </div>
+
+          <div class="input-row" id="group-parcelas" style="display: none;">
+            <div class="input-group">
+              <label>Parc. Atual</label>
+              <input type="number" id="inp-parc-atual" value="1" min="1">
+            </div>
+            <div class="input-group">
+              <label>Total Parc.</label>
+              <input type="number" id="inp-parc-total" value="1" min="1">
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Data</label>
+            <input type="date" id="inp-data">
+          </div>
+
+          <button type="submit" class="btn-submit" id="btn-salvar">Salvar Lançamento</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 3: EXTRATO -->
+    <section id="tab-extrato" class="tab-content">
+      <div class="card">
+        <div class="card-header-flex">
+          <h2>Últimos Lançamentos</h2>
+          <button class="btn-icon" id="btn-refresh">🔄 Atualizar</button>
+        </div>
+        <div id="lista-lancamentos" class="lancamentos-list">
+          <p class="empty-msg">Carregando lançamentos...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: CONFIGURAÇÕES -->
+    <section id="tab-config" class="tab-content">
+      <div class="card">
+        <h2>Conexão com Google Sheets</h2>
+        <p class="help-text">Cole abaixo a URL do Web App gerada no seu Apps Script:</p>
+        <div class="input-group">
+          <label>URL do Apps Script</label>
+          <input type="url" id="inp-api-url" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <button id="btn-save-config" class="btn-submit">Salvar Conexão</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR (iOS Native Style) -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tab-dashboard">
+      <span class="icon">📊</span>
+      <span class="label">Resumo</span>
+    </button>
+    <button class="nav-item" data-tab="tab-novo">
+      <span class="icon">➕</span>
+      <span class="label">Lançar</span>
+    </button>
+    <button class="nav-item" data-tab="tab-extrato">
+      <span class="icon">📄</span>
+      <span class="label">Extrato</span>
+    </button>
+    <button class="nav-item" data-tab="tab-config">
+      <span class="icon">⚙️</span>
+      <span class="label">Config</span>
+    </button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
