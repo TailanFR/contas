@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Controle Financeiro</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -16,12 +17,11 @@
 </head>
 <body class="bg-[#111827] text-slate-100 min-h-screen flex flex-col justify-between">
 
-  <!-- COLE A URL DO SEU GOOGLE APPS SCRIPT AQUI -->
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbz9Rzi0U3YNMk1YV-Ri9uIQnCCYf4elj340z-pSKkAifm2rTdlZwiOsFvSXILVupS1mSA/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbwzC63JiCsi2jxtkOb9HRVb4B2vZsS3cn5HdUPRHy1Ed4fvSRJyN_8fkf94qLbezw_9Dg/exec"; 
   </script>
 
-  <!-- OVERLAY / POPUP DE CARREGAMENTO -->
+  <!-- OVERLAY DE CARREGAMENTO -->
   <div id="loading-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 transition-opacity duration-300">
     <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 flex flex-col items-center shadow-2xl max-w-xs w-full text-center space-y-4">
       <div class="relative w-12 h-12 flex items-center justify-center">
@@ -37,55 +37,135 @@
   <!-- Header -->
   <header class="bg-slate-900/90 backdrop-blur-md pt-safe sticky top-0 z-50 border-b border-slate-800 p-4">
     <div class="flex justify-between items-center max-w-md mx-auto">
-      <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+      <h1 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
         <i class="fa-solid fa-wallet"></i> Controle Financeiro
       </h1>
-      <button onclick="carregarDados('Atualizando dados...')" class="text-slate-400 hover:text-white p-2 rounded-xl transition active:scale-95">
-        <i class="fa-solid fa-rotate-right text-lg" id="refresh-icon"></i>
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="abrirModalTransferencia()" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1.5 rounded-xl font-medium hover:bg-emerald-500/30 transition flex items-center gap-1">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir
+        </button>
+        <button onclick="carregarDados('Atualizando dados...')" class="text-slate-400 hover:text-white p-1.5 rounded-xl transition active:scale-95">
+          <i class="fa-solid fa-rotate-right text-base" id="refresh-icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navegação por Abas -->
+    <div class="flex max-w-md mx-auto mt-3 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+      <button id="btn-aba-dash" onclick="alternarAba('dashboard')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-slate-950 shadow transition">Dashboard</button>
+      <button id="btn-aba-ent" onclick="alternarAba('entradas')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Entradas</button>
+      <button id="btn-aba-sai" onclick="alternarAba('saidas')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Saídas</button>
     </div>
   </header>
 
   <!-- Conteúdo Principal -->
   <main class="flex-1 max-w-md mx-auto w-full p-4 space-y-6 mb-20">
     
-    <!-- DASHBOARD DE SALDOS -->
-    <section>
-      <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Saldos & Investimentos</h2>
-      <div id="cards-saldos" class="grid grid-cols-2 gap-3">
-        <!-- Renderizado dinamicamente -->
-      </div>
-    </section>
+    <!-- ABA DASHBOARD -->
+    <div id="aba-dashboard" class="space-y-6">
+      
+      <!-- SALDOS RESUMIDOS -->
+      <section>
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Saldos Consolidados</h2>
+        <div id="cards-saldos" class="grid grid-cols-2 gap-3">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </section>
 
-    <!-- ENTRADAS -->
-    <section>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Entradas do Mês</h2>
-        <button onclick="abrirModalManual('entrada')" class="text-xs text-emerald-400 font-medium hover:underline flex items-center gap-1">
-          <i class="fa-solid fa-plus"></i> Nova Pousada/Outro
+      <!-- PROJEÇÃO E ECONOMIA -->
+      <section class="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-2xl border border-slate-700/80 shadow-lg space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-line text-emerald-400"></i> Previsão Financeira
+          </h3>
+          <select id="select-meses-projecao" onchange="calcularProjecao()" class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-300 px-2 py-1 focus:outline-none">
+            <option value="3">3 Meses</option>
+            <option value="6">6 Meses</option>
+            <option value="12">12 Meses</option>
+          </select>
+        </div>
+        <div>
+          <div class="text-2xl font-extrabold text-emerald-400" id="valor-projecao">R$ 0,00</div>
+          <p class="text-xs text-slate-400 mt-1" id="desc-projecao">Estimativa de sobra acumulada mantendo o fluxo atual.</p>
+        </div>
+      </section>
+
+      <!-- GRÁFICO DASHBOARD -->
+      <section class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-lg space-y-2">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Distribuição Financeira</h3>
+        <div class="relative h-48 w-full flex items-center justify-center">
+          <canvas id="graficoFinanceiro"></canvas>
+        </div>
+      </section>
+
+      <!-- CONTAS PARCELADAS / ATIVAS -->
+      <section>
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Progresso de Contas Parceladas</h2>
+        <div id="lista-parceladas" class="space-y-3">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ABA ENTRADAS -->
+    <div id="aba-entradas" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lançamentos de Entrada</h2>
+        <button onclick="abrirModalManual('entrada')" class="text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> Nova Entrada
         </button>
       </div>
       <div id="lista-entradas" class="space-y-3">
         <!-- Cards de Entradas -->
       </div>
-    </section>
+    </div>
 
-    <!-- SAÍDAS -->
-    <section>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contas & Saídas</h2>
-        <button onclick="abrirModalManual('saida')" class="text-xs text-rose-400 font-medium hover:underline flex items-center gap-1">
-          <i class="fa-solid fa-plus"></i> Lançar Saída/Cartão
+    <!-- ABA SAÍDAS -->
+    <div id="aba-saidas" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contas & Despesas</h2>
+        <button onclick="abrirModalManual('saida')" class="text-xs bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> Lançar Saída
         </button>
       </div>
       <div id="lista-saidas" class="space-y-3">
         <!-- Cards de Saídas -->
       </div>
-    </section>
+    </div>
 
   </main>
 
-  <!-- MODAL PAGAMENTO SAÍDA (SELEÇÃO DE BANCO) -->
+  <!-- MODAL TRANSFERÊNCIA -->
+  <div id="modal-transferencia" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 border border-slate-700 space-y-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-arrow-right-arrow-left text-emerald-400"></i> Transferência
+      </h3>
+      
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Conta Origem (Sai o valor)</label>
+        <select id="transf-origem" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500"></select>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Conta Destino (Entra o valor)</label>
+        <select id="transf-destino" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500"></select>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Valor (R$)</label>
+        <input type="number" id="transf-valor" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500" placeholder="0.00">
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="fecharModalTransferencia()" class="flex-1 bg-slate-700 py-3 rounded-xl font-medium text-slate-300">Cancelar</button>
+        <button onclick="confirmarTransferencia()" class="flex-1 bg-emerald-500 py-3 rounded-xl font-bold text-slate-950 shadow-lg">Transferir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PAGAMENTO SAÍDA -->
   <div id="modal-pagar-saida" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-800 w-full max-w-sm rounded-2xl p-5 border border-slate-700 space-y-4">
       <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -153,9 +233,9 @@
     </div>
   </div>
 
-  <!-- App Logic JS -->
   <script>
     let dadosAtuais = null;
+    let chartInstance = null;
 
     function mostrarLoading(titulo = "Processando...", desc = "Aguarde um momento...") {
       document.getElementById('loading-title').innerText = titulo;
@@ -171,7 +251,39 @@
       setTimeout(() => overlay.classList.add('hidden'), 300);
     }
 
-    async function carregarDados(mensagemLoading = "Carregando saldos...") {
+    function alternarAba(aba) {
+      const db = document.getElementById('aba-dashboard');
+      const ent = document.getElementById('aba-entradas');
+      const sai = document.getElementById('aba-saidas');
+
+      const btnDb = document.getElementById('btn-aba-dash');
+      const btnEnt = document.getElementById('btn-aba-ent');
+      const btnSai = document.getElementById('btn-aba-sai');
+
+      const desativoClass = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+      const ativoClass = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-slate-950 shadow transition";
+
+      db.classList.add('hidden');
+      ent.classList.add('hidden');
+      sai.classList.add('hidden');
+
+      btnDb.className = desativoClass;
+      btnEnt.className = desativoClass;
+      btnSai.className = desativoClass;
+
+      if (aba === 'dashboard') {
+        db.classList.remove('hidden');
+        btnDb.className = ativoClass;
+      } else if (aba === 'entradas') {
+        ent.classList.remove('hidden');
+        btnEnt.className = ativoClass;
+      } else if (aba === 'saidas') {
+        sai.classList.remove('hidden');
+        btnSai.className = ativoClass;
+      }
+    }
+
+    async function carregarDados(mensagemLoading = "Carregando dados...") {
       mostrarLoading("Sincronizando...", mensagemLoading);
       try {
         const res = await fetch(API_URL);
@@ -190,34 +302,35 @@
       // 1. Render Saldos
       const saldosContainer = document.getElementById('cards-saldos');
       saldosContainer.innerHTML = '';
+      let totalDisponivel = 0;
+      let totalReservas = 0;
+
       dadosAtuais.saldos.forEach(s => {
         let cor = "text-emerald-400";
         let icone = "fa-building-columns";
-        if (s.tipo === "Poupança") { cor = "text-sky-400"; icone = "fa-piggy-bank"; }
-        if (s.tipo === "Investimento") { cor = "text-purple-400"; icone = "fa-chart-line"; }
+        if (s.tipo === "Poupança") { cor = "text-sky-400"; icone = "fa-piggy-bank"; totalReservas += s.valor; }
+        else if (s.tipo === "Investimento") { cor = "text-purple-400"; icone = "fa-chart-line"; totalReservas += s.valor; }
+        else { totalDisponivel += s.valor; }
 
         saldosContainer.innerHTML += `
-          <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-lg flex flex-col justify-between">
+          <div class="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/60 shadow-lg flex flex-col justify-between">
             <div class="flex justify-between items-center text-slate-400 text-xs mb-1">
               <span>${s.nome}</span>
               <i class="fa-solid ${icone}"></i>
             </div>
-            <div class="text-lg font-bold ${cor}">
+            <div class="text-base font-bold ${cor}">
               R$ ${s.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
             </div>
           </div>
         `;
       });
 
-      // 2. Render Entradas
+      // 2. Render Entradas (Aba Entradas)
       const entradasContainer = document.getElementById('lista-entradas');
       entradasContainer.innerHTML = '';
       
       if (dadosAtuais.entradas.length === 0) {
-        entradasContainer.innerHTML = `
-          <div class="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">
-            Nenhuma entrada pendente para este mês!
-          </div>`;
+        entradasContainer.innerHTML = `<div class="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">Nenhuma entrada pendente para este mês!</div>`;
       } else {
         dadosAtuais.entradas.forEach(e => {
           let tagParcelas = e.parcelas !== null ? `<span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20">${e.parcelas}x restantes</span>` : '';
@@ -229,9 +342,7 @@
                   <span class="font-semibold text-white">${e.descricao}</span>
                   ${tagParcelas}
                 </div>
-                <div class="text-xs text-slate-400 mt-0.5">
-                  Destino: <span class="text-slate-200">${e.banco}</span>
-                </div>
+                <div class="text-xs text-slate-400 mt-0.5">Destino: <span class="text-slate-200">${e.banco}</span></div>
               </div>
               <div class="text-right">
                 <div class="text-emerald-400 font-bold mb-1">R$ ${e.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
@@ -244,15 +355,12 @@
         });
       }
 
-      // 3. Render Saídas
+      // 3. Render Saídas (Aba Saídas)
       const saidasContainer = document.getElementById('lista-saidas');
       saidasContainer.innerHTML = '';
 
       if (dadosAtuais.saidas.length === 0) {
-        saidasContainer.innerHTML = `
-          <div class="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">
-            Nenhuma conta pendente para este mês!
-          </div>`;
+        saidasContainer.innerHTML = `<div class="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">Nenhuma conta pendente para este mês!</div>`;
       } else {
         dadosAtuais.saidas.forEach(s => {
           let tagParcelas = s.parcelas !== null ? `<span class="bg-rose-500/10 text-rose-400 text-[10px] px-2 py-0.5 rounded-full border border-rose-500/20">${s.parcelas}x restantes</span>` : '';
@@ -264,9 +372,7 @@
                   <span class="font-semibold text-white">${s.descricao}</span>
                   ${tagParcelas}
                 </div>
-                <div class="text-xs text-slate-400 mt-0.5">
-                  ${s.cartao ? 'Cartão: ' + s.cartao : 'Débito / Conta'}
-                </div>
+                <div class="text-xs text-slate-400 mt-0.5">${s.cartao ? 'Cartão: ' + s.cartao : 'Débito / Conta'}</div>
               </div>
               <div class="text-right">
                 <div class="text-rose-400 font-bold mb-1">R$ ${s.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
@@ -278,10 +384,150 @@
           `;
         });
       }
+
+      // 4. Render Contas Parceladas (Aba Dashboard)
+      const listaParceladas = document.getElementById('lista-parceladas');
+      listaParceladas.innerHTML = '';
+
+      const contasParceladas = dadosAtuais.saidas.filter(s => s.totalParcelas !== null);
+
+      if (contasParceladas.length === 0) {
+        listaParceladas.innerHTML = `<div class="text-center py-4 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">Nenhuma conta parcelada ativa!</div>`;
+      } else {
+        contasParceladas.forEach(p => {
+          let pagas = p.totalParcelas - p.parcelas;
+          let percentual = Math.round((pagas / p.totalParcelas) * 100);
+
+          listaParceladas.innerHTML += `
+            <div class="bg-slate-800/60 p-3.5 rounded-2xl border border-slate-700/50 space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="font-semibold text-white">${p.descricao}</span>
+                <span class="text-slate-400">${p.parcelas}x de R$ ${p.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} restantes</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-700/50">
+                <div class="bg-emerald-400 h-2 rounded-full transition-all duration-500" style="width: ${percentual}%"></div>
+              </div>
+              <div class="flex justify-between items-center text-[10px] text-slate-500">
+                <span>Progresso: ${percentual}% pago</span>
+                <span>Total: ${p.totalParcelas}x</span>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // 5. Atualizar Projeção e Gráficos
+      calcularProjecao();
+      renderizarGrafico(totalDisponivel, totalReservas);
+    }
+
+    function calcularProjecao() {
+      if (!dadosAtuais) return;
+
+      const meses = Number(document.getElementById('select-meses-projecao').value) || 3;
+      
+      let saldoAtual = dadosAtuais.saldos.reduce((acc, s) => acc + s.valor, 0);
+      let entradasFixas = dadosAtuais.entradas.filter(e => e.fixo).reduce((acc, e) => acc + e.valor, 0);
+      let saidasFixas = dadosAtuais.saidas.filter(s => s.fixa).reduce((acc, s) => acc + s.valor, 0);
+
+      // Despesas parceladas que continuarão nos próximos 'X' meses
+      let totalParceladosFuturos = 0;
+      dadosAtuais.saidas.forEach(s => {
+        if (s.parcelas !== null && s.parcelas > 0) {
+          let mesesAplicaveis = Math.min(s.parcelas, meses);
+          totalParceladosFuturos += (s.valor * mesesAplicaveis);
+        }
+      });
+
+      let receitaTotalFutura = entradasFixas * meses;
+      let despesaTotalFutura = (saidasFixas * meses) + totalParceladosFuturos;
+      let saldoProjetado = saldoAtual + receitaTotalFutura - despesaTotalFutura;
+
+      document.getElementById('valor-projecao').innerText = `R$ ${saldoProjetado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+      document.getElementById('desc-projecao').innerText = `Estimativa acumulada para daqui a ${meses} meses.`;
+    }
+
+    function renderizarGrafico(disponivel, reservas) {
+      const ctx = document.getElementById('graficoFinanceiro').getContext('2d');
+      
+      let totalSaidas = dadosAtuais.saidas.reduce((acc, s) => acc + s.valor, 0);
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Saldo Conta', 'Reservas', 'Contas do Mês'],
+          datasets: [{
+            data: [disponivel, reservas, totalSaidas],
+            backgroundColor: ['#10b981', '#38bdf8', '#f43f5e'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    function abrirModalTransferencia() {
+      if (!dadosAtuais) return;
+      const origem = document.getElementById('transf-origem');
+      const destino = document.getElementById('transf-destino');
+      origem.innerHTML = '';
+      destino.innerHTML = '';
+
+      dadosAtuais.saldos.forEach(s => {
+        origem.innerHTML += `<option value="${s.nome}">${s.nome} (R$ ${s.valor.toFixed(2)})</option>`;
+        destino.innerHTML += `<option value="${s.nome}">${s.nome} (R$ ${s.valor.toFixed(2)})</option>`;
+      });
+
+      document.getElementById('modal-transferencia').classList.remove('hidden');
+    }
+
+    function fecharModalTransferencia() {
+      document.getElementById('modal-transferencia').classList.add('hidden');
+    }
+
+    async function confirmarTransferencia() {
+      const origem = document.getElementById('transf-origem').value;
+      const destino = document.getElementById('transf-destino').value;
+      const valor = document.getElementById('transf-valor').value;
+
+      if (!valor || origem === destino) {
+        alert("Selecione contas diferentes e informe um valor válido!");
+        return;
+      }
+
+      fecharModalTransferencia();
+      mostrarLoading("Transferindo...", "Ajustando saldos...");
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: "transferencia",
+            origem: origem,
+            destino: destino,
+            valor: valor
+          })
+        });
+        await carregarDados("Atualizando saldos...");
+      } catch (err) {
+        alert("Erro ao realizar transferência.");
+        esconderLoading();
+      }
     }
 
     async function receberEntrada(row) {
-      mostrarLoading("Lançando Entrada...", "Creditando no banco e atualizando parcelas...");
+      mostrarLoading("Lançando Entrada...", "Creditando no banco...");
       try {
         await fetch(API_URL, {
           method: 'POST',
@@ -308,7 +554,7 @@
       const banco = document.getElementById('pagar-saida-banco').value;
       fecharModalPagar();
 
-      mostrarLoading("Lançando Pagamento...", "Debitando do saldo e dando baixa...");
+      mostrarLoading("Lançando Pagamento...", "Debitando do saldo...");
       try {
         await fetch(API_URL, {
           method: 'POST',
@@ -323,7 +569,7 @@
 
     function abrirModalManual(tipo) {
       document.getElementById('modal-tipo').value = tipo;
-      document.getElementById('modal-titulo').innerText = tipo === 'entrada' ? 'Nova Entrada (Ex: Pousada)' : 'Nova Saída / Lançamento';
+      document.getElementById('modal-titulo').innerText = tipo === 'entrada' ? 'Nova Entrada' : 'Nova Saída';
       document.getElementById('div-meio-pagamento').className = tipo === 'saida' ? 'block' : 'hidden';
       document.getElementById('modal').classList.remove('hidden');
     }
